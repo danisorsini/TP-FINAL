@@ -29,3 +29,8 @@ El proceso incorpora una instancia de aprobación humana (**Human-in-the-Loop**)
 ## Tecnologías utilizadas
 
 n8n · Airtable · OpenAI · Gmail
+
+## Enlaces
+
+- [Base de datos Airtable – acceso de solo lectura](https://airtable.com/appV6GlB8dBVZTVV6/shr1fjU4elD1e4ssA)
+- [Dashboard de Control IA Wineem](https://airtable.com/appV6GlB8dBVZTVV6/pagPQWW0SCRpHXOfu)
