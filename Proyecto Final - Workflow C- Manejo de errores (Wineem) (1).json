@@ -1,0 +1,409 @@
+{
+  "name": "Proyecto Final - Workflow C- Manejo de errores (Wineem)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "3417c206-5cd6-4d16-a1b1-6a8ba2505827",
+      "name": "Error Detectado (Workflow A o B)",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "No requiere configuracion. Se activa solo cuando este workflow esta asignado como 'Error Workflow' en la configuracion (Settings) de los Workflows A y B."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblq8UlkWj9aTlmxe",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID Ejecución": "={{ 'EJEC-' + $execution.id }}",
+            "Resultado": "Error",
+            "Estado final": "Error",
+            "Workflow": "={{ $json.workflow.name.includes('Workflow A') ? 'Workflow A - Generación' : 'Workflow B - Aprobación y Envío' }}",
+            "Detalle": "={{ $json.execution.error.message }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID Ejecución",
+              "displayName": "ID Ejecución",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha y Hora",
+              "displayName": "Fecha y Hora",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Resultado",
+              "displayName": "Resultado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Exitoso",
+                  "value": "Exitoso"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado final",
+              "displayName": "Estado final",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "En revisión",
+                  "value": "En revisión"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                },
+                {
+                  "name": "Rechazado",
+                  "value": "Rechazado"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Duración",
+              "displayName": "Duración",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido relacionado",
+              "displayName": "Contenido relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Error relacionado",
+              "displayName": "Error relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Workflow A - Generación",
+                  "value": "Workflow A - Generación"
+                },
+                {
+                  "name": "Workflow B - Aprobación y Envío",
+                  "value": "Workflow B - Aprobación y Envío"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Detalle",
+              "displayName": "Detalle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Errores",
+              "displayName": "Errores",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "76b5e12c-92ab-48a8-af9c-d968710fe58a",
+      "name": "Registrar Ejecución (Error)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        0
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: Base ID / Table ID de 'Ejecuciones' y credencial de Airtable. No se completan 'Duración' ni 'Contenido relacionado' porque el Error Trigger no tiene acceso a esos datos del workflow que fallo (decision tomada: version simple)."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbligYs04DTMe6igC",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Estado": "Pendiente",
+            "ID Error": "={{ 'ERR-' + $execution.id }}",
+            "Fecha y hora": "={{ $now.toISO() }}",
+            "Workflow": "={{ $('Error Detectado (Workflow A o B)').first().json.workflow.name.includes('Workflow A') ? 'Workflow A - Generación' : 'Workflow B - Aprobación y Envío' }}",
+            "Nodo": "={{ $('Error Detectado (Workflow A o B)').first().json.execution.lastNodeExecuted }}",
+            "Mensaje de error": "={{ $('Error Detectado (Workflow A o B)').first().json.execution.error.message }}",
+            "Ejecución relacionada": "={{ [ $('Registrar Ejecución (Error)').first().json.id ] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID Error",
+              "displayName": "ID Error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha y hora",
+              "displayName": "Fecha y hora",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nodo",
+              "displayName": "Nodo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Mensaje de error",
+              "displayName": "Mensaje de error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Resuelto",
+                  "value": "Resuelto"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido relacionado",
+              "displayName": "Contenido relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Ejecuciones",
+              "displayName": "Ejecuciones",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Ejecución relacionada",
+              "displayName": "Ejecución relacionada",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "fb5ffc7b-6f8d-45c1-83c2-355767738248",
+      "name": "Registrar Error",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        0
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: Base ID / Table ID de 'Errores' y credencial de Airtable. 'Contenido relacionado' queda vacio a proposito (version simple acordada). $json.id toma el ID del registro de Ejecuciones creado en el nodo anterior."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Detectado (Workflow A o B)": {
+      "main": [
+        [
+          {
+            "node": "Registrar Ejecución (Error)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Ejecución (Error)": {
+      "main": [
+        [
+          {
+            "node": "Registrar Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "da1df528-ef47-4943-8a0f-d8ea2d6723dc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "95643ad5303b3bc2943a1376ca2e038ea4e3149dc2fc1a8aad05102ccb7635ac"
+  },
+  "nodeGroups": [],
+  "id": "Vyg1W4wgQQxCf9Jz",
+  "tags": []
+}

@@ -1,0 +1,1029 @@
+{
+  "name": "Proyecto Final - Workflow A - Generacion de Contenido (Wineem)",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-pendiente",
+              "leftValue": "={{ $json.Estado }}",
+              "rightValue": "Pendiente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1aa1d9ce-2100-47bd-b49e-39dc35f1e827",
+      "name": "¿Estado = Pendiente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        1344
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "bc95e106-3135-468b-a23e-e7be54c9a4dc",
+      "name": "Ignorado (no es Pendiente)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblWSyHJokzS2rKKg",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Estado": "Generando"
+          },
+          "matchingColumns": [
+            "id"
+          ]
+        },
+        "options": {}
+      },
+      "id": "1ef4a0d8-3ddc-4ecb-9ee4-13ae7958edf8",
+      "name": "Marcar como Generando",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2480,
+        1216
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: mismo Base ID / Table ID de 'Contenido' y credencial de Airtable."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblE9LXk1k9Epxvjp",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "8618c16a-72dc-4244-adb9-5e2b599c87cf",
+      "name": "Buscar Base RAG (Conocimiento)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2656,
+        1216
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: Base ID / Table ID de 'Base RAG' y credencial de Airtable. Sin filtro: trae todos los registros atomicos."
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger = $('Buscar Ideas Pendientes (Estado = Pendiente)').first().json;\nconst ragItems = $('Buscar Base RAG (Conocimiento)').all();\n\nconst contextoRag = ragItems\n  .map(item => `- ${item.json.Tema}: ${item.json.Contenido}`)\n  .join('\\n');\n\nconst ragIds = ragItems.map(item => item.json.id);\n\nconst promptFinal = `Actua como el redactor de contenido de la marca Wineem (venta de indumentaria).\n\nInformacion de referencia sobre la marca (usala como unica fuente, no inventes datos que no esten aca):\n${contextoRag}\n\nEscribi un posteo corto para redes sociales sobre esta idea:\n\"${trigger['Idea Semilla']}\"`;\n\nreturn [{\n  json: {\n    recordId: trigger.id,\n    ideaSemilla: trigger['Idea Semilla'],\n    contextoRag: contextoRag,\n    ragIds: ragIds,\n    promptFinal: promptFinal,\n    startTime: Date.now()\n  }\n}];\n"
+      },
+      "id": "45c7f85a-5f12-4dc0-af86-5096e8c82081",
+      "name": "Preparar Contexto y Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2816,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"gpt-4o-mini\",\n  max_tokens: 500,\n  messages: [\n    {\n      role: \"system\",\n      content: \"Sos el redactor de contenido de la marca Wineem.\"\n    },\n    {\n      role: \"user\",\n      content: $json.promptFinal\n    }\n  ]\n}) }}",
+        "options": {}
+      },
+      "id": "17509d4f-b1a8-4224-8610-032960a0eec7",
+      "name": "Generar Contenido con OpenAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2992,
+        1216
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YcPn2n0TNdYz6LsJ",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "COMPLETAR: credencial HTTP Header Auth con header 'Authorization' = 'Bearer TU_API_KEY' (platform.openai.com). Body sin '=' inicial, igual que en el TP7."
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuesta = $input.first().json;\n\nconst texto = respuesta.choices && respuesta.choices[0]\n  ? respuesta.choices[0].message.content\n  : 'ERROR: no se pudo extraer el texto generado.';\n\nconst previo = $('Preparar Contexto y Prompt').first().json;\n\nreturn [{\n  json: {\n    recordId: previo.recordId,\n    ragIds: previo.ragIds,\n    borradorGenerado: texto\n  }\n}];\n"
+      },
+      "id": "3e3012af-b9d3-4061-b903-38f1982ab541",
+      "name": "Extraer Texto de la Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblWSyHJokzS2rKKg",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.recordId }}",
+            "Borrador generado": "={{ $json.borradorGenerado }}",
+            "Estado": "En revisión",
+            "Fecha última ejecución": "={{ $now.toISO() }}",
+            "Registros RAG utilizados": "={{ $json.ragIds }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Idea Semilla",
+              "displayName": "Idea Semilla",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Borrador generado",
+              "displayName": "Borrador generado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Generando",
+                  "value": "Generando"
+                },
+                {
+                  "name": "En revisión",
+                  "value": "En revisión"
+                },
+                {
+                  "name": "Aprobado",
+                  "value": "Aprobado"
+                },
+                {
+                  "name": "Rechazado",
+                  "value": "Rechazado"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha última ejecución",
+              "displayName": "Fecha última ejecución",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aprobado",
+              "displayName": "Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Categoria",
+              "displayName": "Categoria",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Campaña",
+                  "value": "Campaña"
+                },
+                {
+                  "name": "Producto",
+                  "value": "Producto"
+                },
+                {
+                  "name": "Promoción",
+                  "value": "Promoción"
+                },
+                {
+                  "name": "Información general",
+                  "value": "Información general"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Errores",
+              "displayName": "Errores",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Ejecuciones",
+              "displayName": "Ejecuciones",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Registros RAG utilizados",
+              "displayName": "Registros RAG utilizados",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email destinatario",
+              "displayName": "Email destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fecha de creación",
+              "displayName": "Fecha de creación",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Última modificación (Aprobado)",
+              "displayName": "Última modificación (Aprobado)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Email del revisor",
+              "displayName": "Email del revisor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Thread ID Gmail",
+              "displayName": "Thread ID Gmail",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4359fb4c-6751-48e4-a0e6-a8eea543f9ae",
+      "name": "Guardar Borrador y pasar a En revisión",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3328,
+        1216
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: mismo Base ID / Table ID de 'Contenido' y credencial de Airtable."
+    },
+    {
+      "parameters": {
+        "sendTo": "ds.wineem@gmail.com",
+        "subject": "={{ 'Borrador pendiente de aprobacion: ' + $('Buscar Ideas Pendientes (Estado = Pendiente)').first().json['Idea Semilla'] }}",
+        "message": "={{ `Hay un nuevo borrador esperando tu revisión en Airtable.<br><br><strong>Idea semilla:</strong> ${$('Buscar Ideas Pendientes (Estado = Pendiente)').first().json['Idea Semilla']}<br><br><strong>Borrador:</strong><br>${$('Extraer Texto de la Respuesta').first().json.borradorGenerado}<br><br>Ingresá a Airtable y marcá <strong>Aprobado</strong> si corresponde.` }}",
+        "options": {}
+      },
+      "id": "dd56db40-b39f-4cda-b8b0-cedd7f0318be",
+      "name": "Notificar al Revisor (HITL pendiente)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3504,
+        1216
+      ],
+      "webhookId": "2ebce624-1a87-48c2-98e4-e18ce6779b88",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "amNNCKF29nzoopzi",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "COMPLETAR: credencial de Gmail (OAuth2). 'Email del revisor' sale del campo homonimo en Contenido, no esta hardcodeado."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblq8UlkWj9aTlmxe",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID Ejecución": "={{ 'EJEC-' + $execution.id }}",
+            "Resultado": "Exitoso",
+            "Estado final": "En revisión",
+            "Duración": "={{ Math.round((Date.now() - $('Preparar Contexto y Prompt').first().json.startTime) / 1000) }}",
+            "Contenido relacionado": "={{ [ $('Buscar Ideas Pendientes (Estado = Pendiente)').first().json.id ] }}",
+            "Workflow": "Workflow A - Generación",
+            "Detalle": "Borrador generado correctamente a partir de la idea semilla."
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID Ejecución",
+              "displayName": "ID Ejecución",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha y Hora",
+              "displayName": "Fecha y Hora",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Resultado",
+              "displayName": "Resultado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Exitoso",
+                  "value": "Exitoso"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado final",
+              "displayName": "Estado final",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "En revisión",
+                  "value": "En revisión"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                },
+                {
+                  "name": "Rechazado",
+                  "value": "Rechazado"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Duración",
+              "displayName": "Duración",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido relacionado",
+              "displayName": "Contenido relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Error relacionado",
+              "displayName": "Error relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Workflow A - Generación",
+                  "value": "Workflow A - Generación"
+                },
+                {
+                  "name": "Workflow B - Aprobación y Envío",
+                  "value": "Workflow B - Aprobación y Envío"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Detalle",
+              "displayName": "Detalle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Errores",
+              "displayName": "Errores",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "bb700c88-f54b-4e5f-a28c-eabfd9b5ec23",
+      "name": "Registrar Ejecución (Éxito)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3680,
+        1216
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: Base ID / Table ID de 'Ejecuciones' y credencial de Airtable. 'ID Ejecución' se genera con el ID de ejecucion de n8n (unico por corrida). No se completa 'Error relacionado' (no aplica en un caso exitoso). 'Duración' se calcula en segundos desde que arranca la busqueda RAG."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "44eb72ee-2da0-4289-a317-cd40afad7c72",
+      "name": "Revisar Ideas Pendientes (cada 1 minuto)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1888,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appV6GlB8dBVZTVV6"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblWSyHJokzS2rKKg"
+        },
+        "filterByFormula": "{Estado} = \"Pendiente\"",
+        "options": {}
+      },
+      "id": "cdc288e9-02fa-4f2d-ac94-0a094b741e74",
+      "name": "Buscar Ideas Pendientes (Estado = Pendiente)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2096,
+        1344
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Reemplaza al Airtable Trigger que fallaba con 'Fecha de creación'. Base/Table ID ya completados."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "list",
+          "cachedResultName": "Wineem - Ecosistema IA Final",
+          "cachedResultUrl": "https://airtable.com/appV6GlB8dBVZTVV6"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbligYs04DTMe6igC",
+          "mode": "list",
+          "cachedResultName": "Errores",
+          "cachedResultUrl": "https://airtable.com/appV6GlB8dBVZTVV6/tbligYs04DTMe6igC"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID Error": "=ERR-{{$now.toMillis()}}",
+            "Workflow": "Workflow A - Generación de Contenido",
+            "Nodo": "Generar Contenido con OpenAI",
+            "Mensaje de error": "={{ $json.error.message }}",
+            "Estado": "Pendiente"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID Error",
+              "displayName": "ID Error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha y hora",
+              "displayName": "Fecha y hora",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nodo",
+              "displayName": "Nodo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Mensaje de error",
+              "displayName": "Mensaje de error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Resuelto",
+                  "value": "Resuelto"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido relacionado",
+              "displayName": "Contenido relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Ejecuciones",
+              "displayName": "Ejecuciones",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Ejecución relacionada",
+              "displayName": "Ejecución relacionada",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        3264,
+        1360
+      ],
+      "id": "9aba5483-751d-4d80-84e6-bd6bca1962cb",
+      "name": "Registrar Error de OpenAI",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "¿Estado = Pendiente?": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Generando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorado (no es Pendiente)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como Generando": {
+      "main": [
+        [
+          {
+            "node": "Buscar Base RAG (Conocimiento)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Base RAG (Conocimiento)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Contexto y Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Contexto y Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generar Contenido con OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Contenido con OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Extraer Texto de la Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar Error de OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Texto de la Respuesta": {
+      "main": [
+        [
+          {
+            "node": "Guardar Borrador y pasar a En revisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Borrador y pasar a En revisión": {
+      "main": [
+        [
+          {
+            "node": "Notificar al Revisor (HITL pendiente)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar al Revisor (HITL pendiente)": {
+      "main": [
+        [
+          {
+            "node": "Registrar Ejecución (Éxito)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisar Ideas Pendientes (cada 1 minuto)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Ideas Pendientes (Estado = Pendiente)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Ideas Pendientes (Estado = Pendiente)": {
+      "main": [
+        [
+          {
+            "node": "¿Estado = Pendiente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "Vyg1W4wgQQxCf9Jz",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "a227eec8-f3cd-4807-80bb-129e55859462",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "95643ad5303b3bc2943a1376ca2e038ea4e3149dc2fc1a8aad05102ccb7635ac"
+  },
+  "nodeGroups": [],
+  "id": "lrH8rB0auLUUot7K",
+  "tags": []
+}

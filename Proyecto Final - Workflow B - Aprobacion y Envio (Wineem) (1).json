@@ -1,0 +1,975 @@
+{
+  "name": "Proyecto Final - Workflow B - Aprobacion y Envio (Wineem)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "6d7e922d-ee69-4142-873c-4d8c50daca1a",
+      "name": "Revisar Aprobaciones (cada 1 minuto)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1264,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appV6GlB8dBVZTVV6"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblWSyHJokzS2rKKg"
+        },
+        "filterByFormula": "AND({Aprobado} = TRUE(), {Estado} = \"En revisión\")",
+        "options": {}
+      },
+      "id": "e8514aa8-e9e5-4c37-8a59-d0e0d9939ac4",
+      "name": "Buscar Aprobados en Revisión",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1072,
+        224
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Base ID / Table ID de 'Contenido' ya completados (appV6GlB8dBVZTVV6 / tblWSyHJokzS2rKKg). Falta solo seleccionar la credencial de Airtable. Reemplaza al Airtable Trigger que fallaba con 'Last Modified Time' en n8n Cloud 2.39.0."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-aprobado-true",
+              "leftValue": "={{ $json.Aprobado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-estado-revision",
+              "leftValue": "={{ $json.Estado }}",
+              "rightValue": "En revisión",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1452d6a-117f-4408-a4cb-8a11c8a91371",
+      "name": "¿Aprobado = true y Estado = En revisión?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        224
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e6625c9c-ce70-4b57-9db2-c522500be8f5",
+      "name": "Frenado por HITL (Aprobado=false o ya procesado)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger = $('Buscar Aprobados en Revisión').first().json;\n\nreturn [{\n  json: {\n    ...trigger,\n    startTime: Date.now()\n  }\n}];\n"
+      },
+      "id": "34445c10-8d57-4784-b364-58b23d1ab24b",
+      "name": "Registrar Inicio de Ejecución",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -688,
+        64
+      ],
+      "notes": "Nota: si en la misma corrida (cada 1 min) hubiera mas de un registro aprobado a la vez, este nodo toma el primero (.first()) — consistente con el resto de la logica del workflow, que no se modifico. Para las pruebas de la entrega (aprobar de a una pieza) no afecta el resultado."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblWSyHJokzS2rKKg",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Estado": "Aprobado"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Idea Semilla",
+              "displayName": "Idea Semilla",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Borrador generado",
+              "displayName": "Borrador generado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Generando",
+                  "value": "Generando"
+                },
+                {
+                  "name": "En revisión",
+                  "value": "En revisión"
+                },
+                {
+                  "name": "Aprobado",
+                  "value": "Aprobado"
+                },
+                {
+                  "name": "Rechazado",
+                  "value": "Rechazado"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha última ejecución",
+              "displayName": "Fecha última ejecución",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Aprobado",
+              "displayName": "Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Categoria",
+              "displayName": "Categoria",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Campaña",
+                  "value": "Campaña"
+                },
+                {
+                  "name": "Producto",
+                  "value": "Producto"
+                },
+                {
+                  "name": "Promoción",
+                  "value": "Promoción"
+                },
+                {
+                  "name": "Información general",
+                  "value": "Información general"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Errores",
+              "displayName": "Errores",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Ejecuciones",
+              "displayName": "Ejecuciones",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Registros RAG utilizados",
+              "displayName": "Registros RAG utilizados",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email destinatario",
+              "displayName": "Email destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fecha de creación",
+              "displayName": "Fecha de creación",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Ultima modificacion Aprobado",
+              "displayName": "Ultima modificacion Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Email del revisor",
+              "displayName": "Email del revisor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Thread ID Gmail",
+              "displayName": "Thread ID Gmail",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0cf1670d-8642-43a2-998a-2a463229b32b",
+      "name": "Marcar como Aprobado",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -512,
+        64
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: Base ID / Table ID de 'Contenido' y credencial de Airtable."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Registrar Inicio de Ejecución').first().json['Email destinatario'] }}",
+        "subject": "={{ 'Nuevo contenido aprobado: ' + $('Registrar Inicio de Ejecución').first().json['Idea Semilla'] }}",
+        "message": "={{ $('Registrar Inicio de Ejecución').first().json['Borrador generado'] }}",
+        "options": {}
+      },
+      "id": "96f1d670-048e-4b69-9be1-8b1a517398b5",
+      "name": "Enviar Contenido Aprobado por Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -336,
+        64
+      ],
+      "webhookId": "3ad4f04a-dc9c-4385-b008-045899cf3a49",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "amNNCKF29nzoopzi",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "COMPLETAR: seleccionar credencial de Gmail (OAuth2). 'Email destinatario' sale del campo homonimo en Contenido, no esta hardcodeado."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblWSyHJokzS2rKKg",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Registrar Inicio de Ejecución').first().json.id }}",
+            "Estado": "Publicado",
+            "Fecha última ejecución": "={{ $now.toISO() }}",
+            "Thread ID Gmail": "={{ $json.threadId }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Idea Semilla",
+              "displayName": "Idea Semilla",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Borrador generado",
+              "displayName": "Borrador generado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Generando",
+                  "value": "Generando"
+                },
+                {
+                  "name": "En revisión",
+                  "value": "En revisión"
+                },
+                {
+                  "name": "Aprobado",
+                  "value": "Aprobado"
+                },
+                {
+                  "name": "Rechazado",
+                  "value": "Rechazado"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha última ejecución",
+              "displayName": "Fecha última ejecución",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aprobado",
+              "displayName": "Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Categoria",
+              "displayName": "Categoria",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Campaña",
+                  "value": "Campaña"
+                },
+                {
+                  "name": "Producto",
+                  "value": "Producto"
+                },
+                {
+                  "name": "Promoción",
+                  "value": "Promoción"
+                },
+                {
+                  "name": "Información general",
+                  "value": "Información general"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Errores",
+              "displayName": "Errores",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Ejecuciones",
+              "displayName": "Ejecuciones",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Registros RAG utilizados",
+              "displayName": "Registros RAG utilizados",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email destinatario",
+              "displayName": "Email destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha de creación",
+              "displayName": "Fecha de creación",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Ultima modificacion Aprobado",
+              "displayName": "Ultima modificacion Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Email del revisor",
+              "displayName": "Email del revisor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Thread ID Gmail",
+              "displayName": "Thread ID Gmail",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1eeb0e5a-4c7c-4b28-99a9-b5aadb0d25d6",
+      "name": "Marcar como Publicado",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        64
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: Base ID / Table ID de 'Contenido' y credencial de Airtable. 'Thread ID Gmail' toma el threadId que devuelve el nodo de Gmail al enviar."
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appV6GlB8dBVZTVV6",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblq8UlkWj9aTlmxe",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID Ejecución": "={{ 'EJEC-' + $execution.id }}",
+            "Resultado": "Exitoso",
+            "Estado final": "Publicado",
+            "Duración": "={{ Math.round((Date.now() - $('Registrar Inicio de Ejecución').first().json.startTime) / 1000) }}",
+            "Contenido relacionado": "={{ [ $('Registrar Inicio de Ejecución').first().json.id ] }}",
+            "Workflow": "Workflow B - Aprobación y Envío",
+            "Detalle": "Contenido enviado por Gmail tras aprobación humana."
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID Ejecución",
+              "displayName": "ID Ejecución",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha y Hora",
+              "displayName": "Fecha y Hora",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Resultado",
+              "displayName": "Resultado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Exitoso",
+                  "value": "Exitoso"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado final",
+              "displayName": "Estado final",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "En revisión",
+                  "value": "En revisión"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                },
+                {
+                  "name": "Rechazado",
+                  "value": "Rechazado"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Duración",
+              "displayName": "Duración",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido relacionado",
+              "displayName": "Contenido relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Error relacionado",
+              "displayName": "Error relacionado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Workflow A - Generación",
+                  "value": "Workflow A - Generación"
+                },
+                {
+                  "name": "Workflow B - Aprobación y Envío",
+                  "value": "Workflow B - Aprobación y Envío"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Detalle",
+              "displayName": "Detalle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Errores",
+              "displayName": "Errores",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "08633869-3e0d-4aeb-9355-2f40a9ac5a03",
+      "name": "Registrar Ejecución (Éxito)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        64
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Aoo8VSJM68pctAWE",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "COMPLETAR: Base ID / Table ID de 'Ejecuciones' y credencial de Airtable."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Revisar Aprobaciones (cada 1 minuto)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Aprobados en Revisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Aprobados en Revisión": {
+      "main": [
+        [
+          {
+            "node": "¿Aprobado = true y Estado = En revisión?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Aprobado = true y Estado = En revisión?": {
+      "main": [
+        [
+          {
+            "node": "Registrar Inicio de Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Frenado por HITL (Aprobado=false o ya procesado)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Inicio de Ejecución": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como Aprobado": {
+      "main": [
+        [
+          {
+            "node": "Enviar Contenido Aprobado por Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Contenido Aprobado por Gmail": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como Publicado": {
+      "main": [
+        [
+          {
+            "node": "Registrar Ejecución (Éxito)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "Vyg1W4wgQQxCf9Jz",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "ea853aec-96d7-4b3b-8c4b-b97f0b31eecd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "95643ad5303b3bc2943a1376ca2e038ea4e3149dc2fc1a8aad05102ccb7635ac"
+  },
+  "nodeGroups": [],
+  "id": "0t7g600pxlvhbqpS",
+  "tags": []
+}
